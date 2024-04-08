@@ -71,4 +71,4 @@ empty_raster <- raster(extent(KLmiddens_buffered), crs = 3154, ncols = 3000, nro
 midden_raster <- rasterize(KLmiddens_buffered, empty_raster, field = 1, crs = 3154)
 plot(midden_raster)
 
-writeRaster(midden_raster, "output/midden_raster.tif")
+writeRaster(midden_raster, "output/midden_raster.tif", overwrite = TRUE)
