@@ -72,3 +72,4 @@ midden_raster <- rasterize(KLmiddens_buffered, empty_raster, field = 1, crs = 31
 plot(midden_raster)
 
 writeRaster(midden_raster, "output/midden_raster.tif", overwrite = TRUE)
+st_write(concave_polygon, "output/kloo_polygon.shp", append = FALSE)
