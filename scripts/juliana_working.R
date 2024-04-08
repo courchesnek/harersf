@@ -42,13 +42,6 @@ gpsKL_sf <- st_transform(gpsKL_sf, crs = 3154)
 coordinates(gpsKL) <- c("x_proj", "y_proj")
 proj4string(gpsKL) <- CRS("+proj=utm +zone=7 +datum=WGS84 +units=m +no_defs")
 
- ### OR
-
-# Extract coordinates from sf object
-coords <- st_coordinates(gpsKL_sf)
-# Create SpatialPoints object
-points <- SpatialPoints(coords[, c("X", "Y")])
-
 
 
 # MCPs --------------------------------------------------------------------
@@ -139,13 +132,31 @@ used_sf$midden <- ifelse(!is.na(raster::extract(middens, used_sf)), "yes", "no")
 
 # clip final data to the grid polygon -------------------------------------
 
-# st_crs(avail_sf) <- 3154
-# st_crs(used_sf) <- 3154
-
+#clip used and available to the kloo grid polygon
 avail_clipped <- st_intersection(kloo, avail_sf)
 used_clipped <- st_intersection(kloo, used_sf)
 
+#plot available points
 plot(avail_sf)
 plot(avail_clipped)
+
+#plot used points
 plot(used_sf)
 plot(used_clipped)
+
+#rbind used and available, make data.table
+done <- as.data.table(rbind(avail_clipped, used_clipped))
+
+#summary of sample size
+done[, .N, by = .(id, status)]
+
+#summary of midden
+done[, .N, by = .(midden, id)]
+
+
+
+# save --------------------------------------------------------------------
+
+saveRDS(done, "output/ready_for_rsf.rds")
+
+
