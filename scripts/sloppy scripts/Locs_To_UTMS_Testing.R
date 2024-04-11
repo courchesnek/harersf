@@ -1,21 +1,12 @@
-### Converting KRSP locations on the grid to UTMs ###
-## Owner: Gladiana Spitz
-## Last Updated: 03/25/2024
+## This script is intended to get starting working with the locs_to_utms() function
 
-
-## Set Up Packages
+# Set Up Packages
 library(tidyverse)
 library(krsp)
 library(lubridate)
 library(sf)
 
-#grid_stakes must be a table or data frame with the desired grid specified in the grid_stakes call -- 
-# ie if you are interested in converting locations in both KL and SU you need two different grid_stakes tables for each grid
-
-
-#x is your desired set of census or other location data with locx and locy to be converted to UTMs
-#The syntax is specific for the census data, but can be adapted for other types within the function
-# location columns must be locx and locx and must be numeric. I will ideally make adjustments to be less case sensitive
+# the function (see Locs_to_UTMs.R for more details)
 
 locs_to_utms <- function(grid_stakes, x){
   #split stake names from XY to X and Y
@@ -53,10 +44,14 @@ locs_to_utms <- function(grid_stakes, x){
   return(cord.UTM)
 }
 
-con <- krsp_connect (host = "krsp.cepb5cjvqban.us-east-2.rds.amazonaws.com",
-                     dbname ="krsp",
-                     username = Sys.getenv("krsp_user"),
-                     password = Sys.getenv("krsp_password")
+# Testing data, let's use KL in 2013
+
+
+# Required Connections - change username and password as needed
+con <- krsp_connect(host = "krsp.cepb5cjvqban.us-east-2.rds.amazonaws.com",
+                    dbname ="krsp",
+                    username = Sys.getenv("krsp_user"),
+                    password = Sys.getenv("krsp_password")
 )
 con_suppl <- krsp_connect(host = "krsp.cepb5cjvqban.us-east-2.rds.amazonaws.com",
                           dbname ="krsp_suppl",
@@ -72,17 +67,23 @@ grid_stakes <- tbl(con_suppl, "grid_stakes") %>%
   collect() %>% 
   mutate(east = -west)
 
+# Census Table -- can be any table that includes columns for locx, locy
+census <- tbl(con, "census") %>%
+  filter(gr == "KL", #Cannot use more than one grid to avoid loc overlap
+         census_date == "2017-05-15",
+         !is.na(locx),
+         !is.na(locy),
+         !is.na(reflo),
+         !is.na(squirrel_id)) %>%
+  select(squirrel_id, reflo, locx, locy, sex, census_date, gr) %>%
+  collect() %>%
+  #need numeric locations to match to convert to UTMs
+  mutate(locx = loc_to_numeric(locx),
+         locy = loc_to_numeric(locy) #not strictly necessary, but good in case there is input error
+  )
+
 # run the function
-cord.UTM <- locs_to_utms(grid_stakes = grid_stakes, x = KLmiddens2017)
+cord.UTM <- locs_to_utms(grid_stakes = grid_stakes, x = census)
 head(cord.UTM)
 ## you should see your data and a new geometry column that is the x,y coordinates of your point in sf
 plot(cord.UTM$geometry) # nice for confirmation the function worked as intended
-
-class(cord.UTM$geometry)
-
-cord.UTM <- cord.UTM %>%
-  select(-west)
-
-saveRDS(cord.UTM, file = "output/cord.utm.rds")
-st_write(cord.UTM, "output/cord.UTM.shp")
-fwrite(cord.UTM, "output/cord.UTM.csv")

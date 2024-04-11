@@ -1,6 +1,6 @@
 # All packages used (at some point)
-#devtools::install_github("KluaneRedSquirrelProject/krsp")
-#library(krsp)
+devtools::install_github("KluaneRedSquirrelProject/krsp")
+library(krsp)
 library(data.table)
 library(dplyr)
 library(lubridate)
@@ -15,6 +15,10 @@ library(concaveman)
 library(adehabitatHR)
 library(amt)
 library(raster)
+library(arm)
+library(rsq)
+
+
 
 
 

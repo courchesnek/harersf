@@ -1,12 +1,9 @@
-
 #load packages
-source("scripts/packages.R")
-
-
+source("scripts/00-packages.R")
 
 # read in data -----------------------------------------------------------
 
-middens <- raster("output/midden_raster.tif")
+middens <- raster("output/midden_raster2.tif")
 kloo <- read_sf("output/kloo_polygon.shp")
 gps_allyear <- readRDS("input/gps_allyear.rds")
 
@@ -18,10 +15,10 @@ gpsKL <- gps_allyear[grid == "Kloo" & yr == 2017, c("grid", "yr", "mnth", "x_pro
 gpsKL[, c("date", "time") := list(as.Date(datetime), format(as.POSIXct(datetime), "%H:%M:%S"))]
 gpsKL[, datetime := NULL]
 
-# Convert 'time' column to time object
+#convert 'time' column to time object
 gpsKL$time <- as_hms(gpsKL$time)
 
-# Filter the data table
+#filter the data table
 gpsKL <- gpsKL[between(time, as_hms("11:00:00"), as_hms("15:00:00"))]
 
 #make id a factor
@@ -43,13 +40,11 @@ coordinates(gpsKL) <- c("x_proj", "y_proj")
 proj4string(gpsKL) <- CRS("+proj=utm +zone=7 +datum=WGS84 +units=m +no_defs")
 
 
-
 # MCPs --------------------------------------------------------------------
 
 # Perform MCP analysis. This is on the SP file
 mcps <- mcp(gpsKL)
 plot(mcps)
-
 
 
 # create available points -------------------------------------------------
@@ -86,7 +81,6 @@ avail_sf <- st_as_sf(avail, coords = c("x_proj", "y_proj"), crs = 32608)
 avail_sf <- st_transform(avail_sf, crs = 3154)
 
 
-
 # get used points only within home ranges -------------------------------------------------------
 
 #used points
@@ -118,8 +112,6 @@ used_sf <- st_as_sf(used, coords = c("x_proj", "y_proj"), crs = 32608)
 # Transform the coordinates to EPSG 3154 (UTM zone 7N)
 used_sf <- st_transform(used_sf, crs = 3154)
 
-
-
 # extract from raster -----------------------------------------------------
 
 # Extract values for available points
@@ -128,13 +120,15 @@ avail_sf$midden <- ifelse(!is.na(raster::extract(middens, avail_sf)), "yes", "no
 # Extract values from HR_midden_raster using SF data
 used_sf$midden <- ifelse(!is.na(raster::extract(middens, used_sf)), "yes", "no")
 
-
-
 # clip final data to the grid polygon -------------------------------------
 
 #clip used and available to the kloo grid polygon
 avail_clipped <- st_intersection(kloo, avail_sf)
 used_clipped <- st_intersection(kloo, used_sf)
+
+avail_clipped <- avail_clipped[, -which(names(avail_clipped) == "FID"), drop = FALSE]
+
+used_clipped <- used_clipped[, -which(names(used_clipped) == "FID"), drop = FALSE]
 
 #plot available points
 plot(avail_sf)
@@ -153,10 +147,29 @@ done[, .N, by = .(id, status)]
 #summary of midden
 done[, .N, by = .(midden, id)]
 
-
-
 # save --------------------------------------------------------------------
 
 saveRDS(done, "output/ready_for_rsf.rds")
+
+# plots -------------------------------------------------------------------
+
+# Calculate the proportions
+prop_available <- nrow(avail_clipped) / nrow(done)
+prop_used <- nrow(used_clipped) / nrow(done)
+
+# Create a data frame for plotting
+proportions_df <- data.frame(Midden = c("Yes", "No", "Yes", "No"),
+                             Category = c("Available", "Available", "Used", "Used"),
+                             Proportion = c(prop_available, 1 - prop_available, prop_used, 1 - prop_used))
+
+# Plot the proportions
+ggplot(proportions_df, aes(x = Midden, y = Proportion, fill = Category)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(x = "Midden", y = "Proportion") +
+  theme_minimal()
+
+ggsave("output/proportions.jpeg", proportions, width = 6, height = 4, units = "in")
+
+
 
 

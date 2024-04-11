@@ -1,6 +1,5 @@
-source("scripts/packages.R")
-
-
+#load packages
+source("scripts/00-packages.R")
 
 # create KL grid polygon --------------------------------------------------
 
@@ -37,8 +36,10 @@ midden_df <- as.data.frame(st_coordinates(midden))
 # Plot the concave hull polygon
 ggplot() +
   geom_polygon(data = grid_df, aes(x = X, y = Y), color = "black", fill = NA) +
-  geom_point(data = midden_df, aes(x = X, y = Y), color = "red", size = 1) +
+  #geom_point(data = midden_df, aes(x = X, y = Y), color = "red", size = 1) +
   theme_void()
+
+ggsave("output/KLgrid_middens.png", KLgrid_middens, width = 6, height = 4, units = "in")
 
 # Midden buffers ----------------------------------------------------------
 
@@ -46,12 +47,15 @@ ggplot() +
 midden_sf <- st_as_sf(midden_df, coords = c("X", "Y"), crs = 3154)
 
 # Create a 10m buffer around each point
-buffered_sf <- st_buffer(midden_sf, dist = 10)
+buffered_sf <- st_buffer(midden_sf, dist = 15)
 
 ggplot() +
-  geom_polygon(data = grid_df, aes(x = X, y = Y), color = "black", fill = NA) +
+  geom_point(data = midden_df, aes(x = X, y = Y), color = "red", size = 1) +
+  #geom_polygon(data = grid_df, aes(x = X, y = Y), color = "black", fill = NA) +
   theme_void() +
   geom_sf(data = buffered_sf, fill = NA, color = "blue")
+
+ggsave("output/KLgrid_middens_buffered.png", KLgrid_middens_buffered, width = 6, height = 4, units = "in")
 
 # Filter for middens only within KL grid polygon
 
@@ -59,8 +63,11 @@ KLmiddens_buffered <- st_intersection(buffered_sf, concave_polygon)
 
 ggplot() +
   geom_polygon(data = grid_df, aes(x = X, y = Y), color = "black", fill = NA) +
-  #theme_void() +
+  theme_void() +
   geom_sf(data = KLmiddens_buffered, fill = NA, color = "blue")
+
+ggsave("output/grid_middens_clipped.png", grid_middens_clipped, width = 6, height = 4, units = "in")
+
 
 # Create midden raster
 
@@ -71,5 +78,7 @@ empty_raster <- raster(extent(KLmiddens_buffered), crs = 3154, ncols = 3000, nro
 midden_raster <- rasterize(KLmiddens_buffered, empty_raster, field = 1, crs = 3154)
 plot(midden_raster)
 
-writeRaster(midden_raster, "output/midden_raster.tif", overwrite = TRUE)
+# save --------------------------------------------------------------------
+
+writeRaster(midden_raster, "output/midden_raster2.tif", overwrite = TRUE)
 st_write(concave_polygon, "output/kloo_polygon.shp", append = FALSE)

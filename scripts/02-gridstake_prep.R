@@ -1,3 +1,4 @@
+#load packages
 source("scripts/packages.R")
 
 # Connection to KRSP database
@@ -30,6 +31,6 @@ KL_utm <- KL_utm %>%
   filter(grid == 'KL') %>%
   select(-comments)
 
-st_write(KL_utm, "Output/KL_utm.shp")
-saveRDS(KL_utm, file = "output/KL_utm.rds")
+# save --------------------------------------------------------------------
+
 fwrite(KL_utm, "output/KL_utm.csv")
